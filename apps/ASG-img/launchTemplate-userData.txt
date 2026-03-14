@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Your main orchestrator URL
+ORCHESTRATOR_URL="http://YOUR_MAIN_NODE_IP:PORT"
+
+# 1. Get a token for AWS IMDSv2 (required for modern EC2)
+TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" -s)
+
+# 2. Get this machine's Instance ID and IP
+INSTANCE_ID=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/instance-id)
+LOCAL_IP=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/local-ipv4)
+
+# 3. Register the machine once it boots
+curl -X POST "$ORCHESTRATOR_URL/register" \
+     -H "Content-Type: application/json" \
+     -d "{\"instanceId\": \"$INSTANCE_ID\", \"ip\": \"$LOCAL_IP\"}"
+
+# 4. Infinite loop to send heartbeats every 15 seconds
+while true; do
+  curl -X POST "$ORCHESTRATOR_URL/heartbeat" \
+       -H "Content-Type: application/json" \
+       -d "{\"instanceId\": \"$INSTANCE_ID\"}" -s > /dev/null
+       
+  sleep 15
+done
