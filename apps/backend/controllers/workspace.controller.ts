@@ -140,17 +140,7 @@ export const killMachine = async (
   });
 };
 
-export const stopMachine = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {};
 
-export const machineStatus = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {};
 
 export const registerMachine = async (
   req: Request,
