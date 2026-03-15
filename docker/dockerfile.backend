@@ -11,6 +11,9 @@ COPY ./apps/backend/package.json ./apps/backend/package.json
 COPY ./packages ./packages
 COPY ./apps/backend ./apps/backend
 
+ARG DATABASE_URL
+ENV DATABASE_URL=$DATABASE_URL
+
 RUN bun install
 
 EXPOSE 3001
