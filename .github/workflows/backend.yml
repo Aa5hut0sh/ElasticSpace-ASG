@@ -24,7 +24,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: dockerfile/dockerfile.backend
+          file: docker/dockerfile.backend
           push: true
           tags: ${{ secrets.DOCKER_HUB_USERNAME }}/elastic-space-backend:prod
 
