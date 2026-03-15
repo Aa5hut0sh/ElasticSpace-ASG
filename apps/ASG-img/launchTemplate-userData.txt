@@ -1,25 +1,30 @@
 #!/bin/bash
 
-# Your main orchestrator URL
-ORCHESTRATOR_URL="http://YOUR_MAIN_NODE_IP:PORT"
+cd /home/ubuntu/agent
 
-# 1. Get a token for AWS IMDSv2 (required for modern EC2)
-TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" -s)
+# load nvm
+export NVM_DIR="/home/ubuntu/.nvm"
+source $NVM_DIR/nvm.sh
 
-# 2. Get this machine's Instance ID and IP
-INSTANCE_ID=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/instance-id)
-LOCAL_IP=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/local-ipv4)
+# ensure node in path
+export PATH=$PATH:/home/ubuntu/.nvm/versions/node/v24.13.0/bin/
 
-# 3. Register the machine once it boots
-curl -X POST "$ORCHESTRATOR_URL/register" \
-     -H "Content-Type: application/json" \
-     -d "{\"instanceId\": \"$INSTANCE_ID\", \"ip\": \"$LOCAL_IP\"}"
+# install dependencies
+npm install
 
-# 4. Infinite loop to send heartbeats every 15 seconds
-while true; do
-  curl -X POST "$ORCHESTRATOR_URL/heartbeat" \
-       -H "Content-Type: application/json" \
-       -d "{\"instanceId\": \"$INSTANCE_ID\"}" -s > /dev/null
-       
-  sleep 15
-done
+# install pm2
+npm install -g pm2
+
+# start agent
+pm2 start agent.js --name agent
+
+# persist pm2
+pm2 startup systemd -u ubuntu --hp /home/ubuntu
+pm2 save
+
+# run coder container
+docker run -d \
+  -p 8080:8080 \
+  --restart=always \
+  --name coder \
+  codercom

@@ -42,6 +42,8 @@ export const findUserByEmail = async (email: string) => {
     throw err;
   }
 };
+
+
 export const findUserById = async (userId: string) => {
   try {
     return await prisma.user.findFirst({

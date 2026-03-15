@@ -1,34 +1,82 @@
-// agent.js (running on the EC2 instance)
-const axios = require('axios');
-const { execSync } = require('child_process');
+const axios = require("axios");
 
-const ORCHESTRATOR_URL = 'http://MAIN_NODE_IP:3000';
+const ORCHESTRATOR_URL = "http://MAIN_NODE_IP:3000";
+const METADATA_BASE = "http://169.254.169.254/latest";
+
+let instanceId = null;
+
+async function getMetadataToken() {
+    const res = await axios.put(
+        `${METADATA_BASE}/api/token`,
+        null,
+        {
+            headers: {
+                "X-aws-ec2-metadata-token-ttl-seconds": "21600"
+            },
+            timeout: 2000
+        }
+    );
+
+    return res.data;
+}
 
 async function getAwsMetadata(path) {
-    const token = execSync('curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" -s').toString();
-    const data = execSync(`curl -H "X-aws-ec2-metadata-token: ${token}" -s http://169.254.169.254/latest/meta-data/${path}`).toString();
-    return data;
+    const token = await getMetadataToken();
+
+    const res = await axios.get(
+        `${METADATA_BASE}/meta-data/${path}`,
+        {
+            headers: {
+                "X-aws-ec2-metadata-token": token
+            },
+            timeout: 2000
+        }
+    );
+
+    return res.data.trim();
+}
+
+async function registerNode(ip) {
+    await axios.post(
+        `${ORCHESTRATOR_URL}/api/workspace/register`,
+        { instanceId, ip },
+        { timeout: 5000 }
+    );
+}
+
+async function sendHeartbeat() {
+    await axios.post(
+        `${ORCHESTRATOR_URL}/api/workspace/heartbeat`,
+        { instanceId },
+        { timeout: 5000 }
+    );
 }
 
 async function start() {
     try {
-        const instanceId = await getAwsMetadata('instance-id');
-        const ip = await getAwsMetadata('local-ipv4'); 
+        instanceId = await getAwsMetadata("instance-id");
+        const ip = await getAwsMetadata("local-ipv4");
 
-        await axios.post(`${ORCHESTRATOR_URL}/api/workspace/register`, { instanceId, ip });
-        console.log('Registered successfully');
+        console.log("Instance:", instanceId);
+        console.log("IP:", ip);
+
+        await registerNode(ip);
+        console.log("Registered successfully");
 
         setInterval(async () => {
             try {
-                await axios.post(`${ORCHESTRATOR_URL}/api/workspace/heartbeat`, { instanceId });
+                await sendHeartbeat();
+                console.log("Heartbeat sent");
             } catch (err) {
-                console.error('Failed to send heartbeat', err.message);
+                console.error("Heartbeat failed:", err.message);
             }
         }, 15000);
 
     } catch (err) {
-        console.error('Agent startup failed', err);
-        process.exit(1);
+        console.error("Agent startup failed:", err.message);
+
+        // retry startup instead of exiting
+        setTimeout(start, 5000);
     }
 }
 
