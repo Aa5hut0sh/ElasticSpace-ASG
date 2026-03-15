@@ -57,19 +57,28 @@ export const startMachine = async (
     });
 
     const asgInfo = await asgClient.send(describeCmd);
-    const currentCapacity =
-      asgInfo.AutoScalingGroups?.[0]?.DesiredCapacity || 0;
+    const asgGroup = asgInfo.AutoScalingGroups?.[0];
+    
+    const currentCapacity = asgGroup?.DesiredCapacity || 0;
+    const maxCapacity = asgGroup?.MaxSize || 0;
+
+    if (currentCapacity >= maxCapacity) {
+      return res.status(429).json({
+        success: false,
+        message: "System is at maximum capacity. No machines available.",
+      });
+    }
 
     const scaleUpCmd = new SetDesiredCapacityCommand({
       AutoScalingGroupName: asgName,
       DesiredCapacity: currentCapacity + 1,
     });
+    
     await asgClient.send(scaleUpCmd);
 
     return res.status(202).json({
       success: true,
-      message:
-        "No machines available. Provisioning a new one. Please try again in 30 seconds.",
+      message: "No machines available. Provisioning a new one. Please try again in 30 seconds.",
     });
   }
 
