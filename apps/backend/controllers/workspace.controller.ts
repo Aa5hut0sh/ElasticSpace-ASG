@@ -175,6 +175,9 @@ export const getMachine = async (req: Request, res: Response, next: NextFunction
     where: {
       ownerId: userId,
     },
+    orderBy:{
+      startTime:"desc",
+    }
   });
 
   res.status(200).json({

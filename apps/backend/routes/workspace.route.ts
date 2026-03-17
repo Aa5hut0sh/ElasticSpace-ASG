@@ -5,7 +5,7 @@ const route = Router();
 
 route.post("/start" , authenticate , workspaceController.startMachine );
 route.post("/stop",authenticate ,workspaceController.killMachine );
-route.post("/get-machines",authenticate , workspaceController.getMachine);
+route.get("/get-machines",authenticate , workspaceController.getMachine);
 route.post("/register", workspaceController.registerMachine);
 route.post("/haertbeat", workspaceController.machineHeartbeat);
 

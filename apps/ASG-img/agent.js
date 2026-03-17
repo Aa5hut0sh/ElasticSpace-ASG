@@ -55,7 +55,7 @@ async function sendHeartbeat() {
 async function start() {
     try {
         instanceId = await getAwsMetadata("instance-id");
-        const ip = await getAwsMetadata("local-ipv4");
+        const ip = await getAwsMetadata("public-ipv4");
 
         console.log("Instance:", instanceId);
         console.log("IP:", ip);

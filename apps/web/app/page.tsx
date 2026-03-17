@@ -30,7 +30,7 @@ export default function Main() {
 
   const fetchMachines = async () => {
     try {
-      const res = await api.post("/workspace/get-machines");
+      const res = await api.get("/workspace/get-machines");
       if (res.data.success) {
         setMachines(res.data.machines);
       }
